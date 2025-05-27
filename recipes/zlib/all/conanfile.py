@@ -75,6 +75,11 @@ class ZlibConan(ConanFile):
                                       '/* may be set to #if 1 by ./configure */',
                                       '#if defined(HAVE_STDARG_H) && (1-HAVE_STDARG_H-1 != 0)')
 
+        if self.settings.compiler == "apple-clang":
+            replace_in_file(self, os.path.join(self.source_folder, "zutil.h"),
+            "#        define fdopen(fd,mode) NULL",
+            "//#        define fdopen(fd,mode) NULL")
+
     def build(self):
         self._patch_sources()
         cmake = CMake(self)
