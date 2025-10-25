@@ -85,6 +85,12 @@ class LuajitConan(ConanFile):
                                       'TARGET_O= $(LUAJIT_SO)')
             if "clang" in str(self.settings.compiler):
                 replace_in_file(self, makefile, 'CC= $(DEFAULT_CC)', 'CC= clang')
+        else:
+            batchfile = os.path.join(self.source_folder, 'src', 'msvcbuild.bat')
+            if self.settings.build_type == "Debug":
+                replace_in_file(self, batchfile,
+                                      '%LJCOMPILE% lj_*.c',
+                                      '%LJCOMPILE% /MTd lj_*.c' )
 
     @property
     def _macosx_deployment_target(self):
@@ -110,7 +116,8 @@ class LuajitConan(ConanFile):
         if is_msvc(self):
             with chdir(self, os.path.join(self.source_folder, "src")):
                 variant = '' if self.options.shared else 'static'
-                self.run(f"msvcbuild.bat {variant}", env="conanbuild")
+                build_type = '' if self.settings.build_type == "Release" else 'debug'
+                self.run(f"msvcbuild.bat {build_type} {variant}", env="conanbuild")
         else:
             with chdir(self, self.source_folder):
                 autotools = Autotools(self)
