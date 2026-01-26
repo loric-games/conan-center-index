@@ -109,6 +109,3 @@ class ZlibConan(ConanFile):
         else:
             libname = "z"
         self.cpp_info.libs = [libname]
-
-        self.cpp_info.names["cmake_find_package"] = "ZLIB"
-        self.cpp_info.names["cmake_find_package_multi"] = "ZLIB"

@@ -29,7 +29,7 @@ class AsmjitConan(ConanFile):
 
     @property
     def _min_cppstd(self):
-        return 11
+        return 11 if self.version <= "cci.20250524" else 17
 
     @property
     def _compilers_minimum_version(self):
@@ -58,6 +58,12 @@ class AsmjitConan(ConanFile):
                 raise ConanInvalidConfiguration(
                     f"{self.ref} does not support {self.settings.compiler}/{self.settings.compiler.version}."
                 )
+
+    def build_requirements(self):
+        if self.version >= "cci.20251005":
+            self.tool_requires("cmake/[>=3.24 <4]")
+        else:
+            self.tool_requires("cmake/[>=3.19 <4]")
 
     def source(self):
         get(self, **self.conan_data["sources"][self.version], strip_root=True)

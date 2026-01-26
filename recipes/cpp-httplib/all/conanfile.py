@@ -22,12 +22,14 @@ class CpphttplibConan(ConanFile):
         "with_zlib": [True, False],
         "with_brotli": [True, False],
         "use_macos_keychain_certs": [True, False],
+        "with_zstd": [True, False],
     }
     default_options = {
         "with_openssl": False,
         "with_zlib": False,
         "with_brotli": False,
         "use_macos_keychain_certs": True,
+        "with_zstd": False,
     }
     no_copy_source = True
 
@@ -37,15 +39,13 @@ class CpphttplibConan(ConanFile):
 
     def requirements(self):
         if self.options.with_openssl:
-            if Version(self.version) < "0.15":
-                self.requires("openssl/[>=1.1 <4]")
-            else:
-                # New version of httplib.h requires OpenSSL 3
-                self.requires("openssl/[>=3 <4]")
+            self.requires("openssl/[>=3 <4]")
         if self.options.with_zlib:
             self.requires("zlib/[>=1.2.11 <2]")
         if self.options.with_brotli:
             self.requires("brotli/1.1.0")
+        if self.options.get_safe("with_zstd"):
+            self.requires("zstd/[>=1.5 <1.6]")
 
     def package_id(self):
         self.info.clear()
@@ -69,16 +69,23 @@ class CpphttplibConan(ConanFile):
         self.cpp_info.includedirs.append(os.path.join("include", "httplib"))
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
+
         if self.options.with_openssl:
             self.cpp_info.defines.append("CPPHTTPLIB_OPENSSL_SUPPORT")
         if self.options.with_zlib:
             self.cpp_info.defines.append("CPPHTTPLIB_ZLIB_SUPPORT")
         if self.options.with_brotli:
             self.cpp_info.defines.append("CPPHTTPLIB_BROTLI_SUPPORT")
+        if self.options.get_safe("with_zstd"):
+            self.cpp_info.defines.append("CPPHTTPLIB_ZSTD_SUPPORT")
         if self.settings.os in ["Linux", "FreeBSD"]:
             self.cpp_info.system_libs = ["pthread"]
         elif self.settings.os == "Windows":
             self.cpp_info.system_libs = ["crypt32", "cryptui", "ws2_32"]
-        elif self.settings.os == "Macos" and self.options.with_openssl and self.options.get_safe("use_macos_keychain_certs"):
-            self.cpp_info.frameworks = ["CoreFoundation", "Security"]
-            self.cpp_info.defines.append("CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN")
+        elif self.settings.os == "Macos":
+            if self.options.with_openssl and self.options.get_safe("use_macos_keychain_certs"):
+                self.cpp_info.frameworks.extend(["CFNetwork", "CoreFoundation", "Security"])
+                self.cpp_info.defines.append("CPPHTTPLIB_USE_CERTS_FROM_MACOSX_KEYCHAIN")
+                self.cpp_info.frameworks.extend(["CFNetwork", "CoreFoundation"])
+        
+        self.cpp_info.defines.append("CPPHTTPLIB_USE_NON_BLOCKING_GETADDRINFO")
