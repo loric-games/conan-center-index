@@ -22,8 +22,8 @@ class LuajitConan(ConanFile):
     topics = ("lua", "jit")
     provides = "lua"
     settings = "os", "arch", "compiler", "build_type"
-    options = {"shared": [True, False], "fPIC": [True, False]}
-    default_options = {"shared": False, "fPIC": True}
+    options = {"shared": [True, False], "fPIC": [True, False], "gc64": [True, False]}
+    default_options = {"shared": False, "fPIC": True, "gc64": False}
 
     def export_sources(self):
         export_conandata_patches(self)
@@ -83,6 +83,11 @@ class LuajitConan(ConanFile):
                 replace_in_file(self, makefile,
                                       'TARGET_O= $(LUAJIT_A)',
                                       'TARGET_O= $(LUAJIT_SO)')
+            if self.options.gc64:
+                replace_in_file(self, makefile,
+                                      '#XCFLAGS+= -DLUAJIT_ENABLE_GC64',
+                                      'XCFLAGS+= -DLUAJIT_ENABLE_GC64')
+
             if "clang" in str(self.settings.compiler):
                 replace_in_file(self, makefile, 'CC= $(DEFAULT_CC)', 'CC= clang')
         else:
@@ -91,7 +96,6 @@ class LuajitConan(ConanFile):
                 replace_in_file(self, batchfile,
                                       '%LJCOMPILE% lj_*.c',
                                       '%LJCOMPILE% /MTd lj_*.c' )
-
     @property
     def _macosx_deployment_target(self):
         return self.settings.get_safe("os.version")
@@ -115,9 +119,10 @@ class LuajitConan(ConanFile):
         self._patch_sources()
         if is_msvc(self):
             with chdir(self, os.path.join(self.source_folder, "src")):
+                gc64 = '' if not self.options.gc64 else 'gc64'
                 variant = '' if self.options.shared else 'static'
                 build_type = '' if self.settings.build_type == "Release" else 'debug'
-                self.run(f"msvcbuild.bat {build_type} {variant}", env="conanbuild")
+                self.run(f"msvcbuild.bat {gc64} {build_type} {variant}", env="conanbuild")
         else:
             with chdir(self, self.source_folder):
                 autotools = Autotools(self)
